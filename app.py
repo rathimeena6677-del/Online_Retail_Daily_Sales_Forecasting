@@ -1,7 +1,8 @@
 """
 Streamlit app — Online Retail Daily Sales Forecasting
 ------------------------------------------------------
-1. Loads the cleaned online retail dataset.
+1. Loads the cleaned online retail dataset (auto-downloaded from a
+   GitHub Release, so no large file needs to be committed to the repo).
 2. Lets the user pick a date. If that date exists in the data, all metrics
    are auto-calculated from the raw transactions. The user can also
    override any value manually before predicting.
@@ -16,9 +17,11 @@ Run with:  streamlit run app.py
 
 import pickle
 from datetime import date
+from io import BytesIO
 
 import numpy as np
 import pandas as pd
+import requests
 import streamlit as st
 
 # --------------------------------------------------------------------------
@@ -29,6 +32,8 @@ st.set_page_config(
     page_icon="🛒",
     layout="centered",
 )
+
+CSV_URL = "https://github.com/rathimeena6677-del/Online_Retail_Daily_Sales_Forecasting/releases/download/v1.0-data/online_retail_cleaned.csv"
 
 FEATURE_ORDER = [
     "Orders",
@@ -45,9 +50,11 @@ FEATURE_ORDER = [
 # --------------------------------------------------------------------------
 # Cached loaders
 # --------------------------------------------------------------------------
-@st.cache_data
-def load_data(uploaded_file) -> pd.DataFrame:
-    df = pd.read_csv(uploaded_file)
+@st.cache_data(show_spinner="Downloading dataset (first load only, then cached)...")
+def load_data_from_url(url: str) -> pd.DataFrame:
+    response = requests.get(url, timeout=60)
+    response.raise_for_status()
+    df = pd.read_csv(BytesIO(response.content))
     df["invoicedate"] = pd.to_datetime(df["invoicedate"])
     df["Date"] = df["invoicedate"].dt.date
     return df
@@ -92,22 +99,22 @@ st.write(
     "from the trained regression model."
 )
 
-# --- Upload the dataset & trained model -------------------------------------
-st.subheader("0. Upload your files")
-col_a, col_b = st.columns(2)
-with col_a:
-    csv_file = st.file_uploader("Cleaned retail CSV", type=["csv"])
-with col_b:
-    model_file = st.file_uploader("Trained model (model.pkl)", type=["pkl"])
-
-if csv_file is None or model_file is None:
-    st.info("Upload both the dataset CSV and the model.pkl file to continue.")
-    st.stop()
+# --- Load the dataset (auto) & the trained model (upload) -------------------
+st.subheader("0. Load your files")
 
 try:
-    df = load_data(csv_file)
+    df = load_data_from_url(CSV_URL)
+    st.success(f"Dataset loaded automatically from GitHub Release ({len(df):,} rows).")
 except Exception as e:
-    st.error(f"Couldn't read the CSV: {e}")
+    st.error(
+        f"Couldn't download the dataset from the Release link. Error: {e}\n\n"
+        f"Check that this URL is correct and public: {CSV_URL}"
+    )
+    st.stop()
+
+model_file = st.file_uploader("Upload trained model (model.pkl)", type=["pkl"])
+if model_file is None:
+    st.info("Upload model.pkl to continue.")
     st.stop()
 
 try:
