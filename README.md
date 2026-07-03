@@ -1,5 +1,5 @@
 # Online Retail — Daily Sales Forecast (Streamlit)
-
+LIVE DEMO LINK:https://onlineretaildailysalesforecasting-wxaqtcaks72o8vzkcczevj.streamlit.app/
 Predicts total daily sales from order/customer/quantity metrics using a
 Linear Regression model trained in `online_Retail_sales_Forecasting_using_ML.ipynb`.
 
